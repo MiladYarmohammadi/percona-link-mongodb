@@ -64,10 +64,10 @@ func ConnectWithOptions(
 		opts.SetCompressors(connOpts.Compressors)
 	}
 
-	if config.MongoLogEnabled {
+	if config.MongoLogEnabled() {
 		opts = opts.SetLoggerOptions(options.Logger().
 			SetSink(log.MongoLogger(ctx)).
-			SetComponentLevel(config.MongoLogComponent, config.MongoLogLevel))
+			SetComponentLevel(config.MongoLogComponent(), config.MongoLogLevel()))
 	}
 
 	conn, err := mongo.Connect(opts)
@@ -75,11 +75,11 @@ func ConnectWithOptions(
 		return nil, err //nolint:wrapcheck
 	}
 
-	err = util.CtxWithTimeout(ctx, config.PingTimeout, func(ctx context.Context) error {
+	err = util.CtxWithTimeout(ctx, config.PingTimeout(), func(ctx context.Context) error {
 		return conn.Ping(ctx, nil)
 	})
 	if err != nil {
-		err1 := util.CtxWithTimeout(ctx, config.DisconnectTimeout, conn.Disconnect)
+		err1 := util.CtxWithTimeout(ctx, config.DisconnectTimeout(), conn.Disconnect)
 		if err1 != nil {
 			log.Ctx(ctx).Warn("Disconnect: " + err1.Error())
 		}

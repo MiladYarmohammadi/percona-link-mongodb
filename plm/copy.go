@@ -89,23 +89,23 @@ func NewCopyManager(source, target *mongo.Client, options CopyManagerOptions) *C
 	}
 
 	if options.SegmentSizeBytes < 0 {
-		options.SegmentSizeBytes = config.AutoCloneSegmentSize
+		options.SegmentSizeBytes = int64(config.AutoCloneSegmentSize())
 	} else if options.SegmentSizeBytes > 0 {
-		options.SegmentSizeBytes = max(options.SegmentSizeBytes, config.MinCloneSegmentSizeBytes)
-		options.SegmentSizeBytes = min(options.SegmentSizeBytes, config.MaxCloneSegmentSizeBytes)
+		options.SegmentSizeBytes = max(options.SegmentSizeBytes, int64(config.MinCloneSegmentSizeBytes()))
+		options.SegmentSizeBytes = min(options.SegmentSizeBytes, int64(config.MaxCloneSegmentSizeBytes()))
 	}
 
 	if options.ReadBatchSizeBytes == 0 {
-		options.ReadBatchSizeBytes = config.DefaultCloneReadBatchSizeBytes
+		options.ReadBatchSizeBytes = int32(config.DefaultCloneReadBatchSizeBytes())
 	} else {
-		options.ReadBatchSizeBytes = max(options.ReadBatchSizeBytes, config.MinCloneReadBatchSizeBytes)
-		options.ReadBatchSizeBytes = min(options.ReadBatchSizeBytes, config.MaxCloneReadBatchSizeBytes)
+		options.ReadBatchSizeBytes = max(options.ReadBatchSizeBytes, int32(config.MinCloneReadBatchSizeBytes()))
+		options.ReadBatchSizeBytes = min(options.ReadBatchSizeBytes, int32(config.MaxCloneReadBatchSizeBytes()))
 	}
 
 	lg := log.New("copy")
 	lg.Debugf("NumReadWorkers: %d", options.NumReadWorkers)
 	lg.Debugf("NumInsertWorkers: %d", options.NumInsertWorkers)
-	if options.SegmentSizeBytes == config.AutoCloneSegmentSize {
+	if options.SegmentSizeBytes == int64(config.AutoCloneSegmentSize()) {
 		lg.Debug("SegmentSizeBytes: auto") //nolint:gosec
 	} else {
 		lg.Debugf("SegmentSizeBytes: %d (%s)", options.SegmentSizeBytes,
@@ -310,7 +310,7 @@ func (cm *CopyManager) copyCollection(
 					pendingSegments.Done()
 
 					err := util.CtxWithTimeout(context.Background(),
-						config.CloseCursorTimeout, cursor.Close)
+						config.CloseCursorTimeout(), cursor.Close)
 					if err != nil {
 						log.Ctx(ctx).Error(err, "Close cursor")
 					}
@@ -387,13 +387,13 @@ func (cm *CopyManager) readSegment(
 ) error {
 	zl := log.Ctx(ctx).Unwrap()
 	batchID := nextID()
-	documents := make([]any, 0, config.MaxInsertBatchSize)
+	documents := make([]any, 0, config.MaxInsertBatchSize())
 	sizeBytes := 0
 	lastSentAt := time.Now()
 
 	for cur.Next(ctx) {
-		if sizeBytes+len(cur.Current) > config.MaxWriteBatchSizeBytes ||
-			len(documents) == config.MaxInsertBatchSize {
+		if sizeBytes+len(cur.Current) > config.MaxWriteBatchSizeBytes() ||
+			len(documents) == config.MaxInsertBatchSize() {
 			elapsed := time.Since(lastSentAt)
 
 			zl.Trace().
@@ -414,7 +414,7 @@ func (cm *CopyManager) readSegment(
 			}
 
 			batchID = nextID()
-			documents = make([]any, 0, config.MaxInsertBatchSize)
+			documents = make([]any, 0, config.MaxInsertBatchSize())
 			sizeBytes = 0
 			lastSentAt = time.Now()
 		}
@@ -610,8 +610,8 @@ func NewSegmenter(
 
 	// AvgObjSize must be less than or equal to 16MiB [config.MaxBSONSize]
 	var segmentSize int64
-	if options.SegmentSizeBytes == config.AutoCloneSegmentSize {
-		segmentSize = max(stats.Size/int64(options.AutoNumSegment), config.MinCloneSegmentSizeBytes)
+	if options.SegmentSizeBytes == int64(config.AutoCloneSegmentSize()) {
+		segmentSize = max(stats.Size/int64(options.AutoNumSegment), int64(config.MinCloneSegmentSizeBytes()))
 
 		log.Ctx(ctx).Debugf("SegmentSizeBytes (auto): %d (%s)",
 			segmentSize, humanize.Bytes(uint64(segmentSize))) //nolint:gosec

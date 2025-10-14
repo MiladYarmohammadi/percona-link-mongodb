@@ -290,7 +290,7 @@ func (c *Clone) doClone(ctx context.Context, namespaces []namespaceInfo) error {
 
 	numParallelCollections := config.CloneNumParallelCollections()
 	if numParallelCollections < 1 {
-		numParallelCollections = config.DefaultCloneNumParallelCollection
+		numParallelCollections = config.DefaultCloneNumParallelCollection()
 	}
 
 	cloneLogger.Debugf("NumParallelCollections: %d", numParallelCollections)
@@ -578,7 +578,7 @@ func (c *Clone) collectSizeMap(ctx context.Context) error {
 	total := uint64(0)
 
 	for _, db := range databases {
-		if db == config.PLMDatabase {
+		if db == config.PLMDatabase() {
 			continue
 		}
 

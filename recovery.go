@@ -35,8 +35,8 @@ func Restore(ctx context.Context, m *mongo.Client, rec Recoverable) error {
 
 	var cp checkpoint
 
-	err := m.Database(config.PLMDatabase).
-		Collection(config.RecoveryCollection).
+	err := m.Database(config.PLMDatabase()).
+		Collection(config.RecoveryCollection()).
 		FindOne(ctx, bson.D{{"_id", recoveryID}}).
 		Decode(&cp)
 	if err != nil {
@@ -77,7 +77,7 @@ func RunCheckpointing(ctx context.Context, m *mongo.Client, rec Recoverable) {
 			lg.Debug("Checkpoint saved")
 		}
 
-		time.Sleep(config.RecoveryCheckpointingInternal)
+		time.Sleep(config.RecoveryCheckpointingInternal())
 	}
 }
 
@@ -90,8 +90,8 @@ func DoCheckpoint(ctx context.Context, m *mongo.Client, rec Recoverable) error {
 		return errNoRecoveryData
 	}
 
-	_, err = m.Database(config.PLMDatabase).
-		Collection(config.RecoveryCollection).
+	_, err = m.Database(config.PLMDatabase()).
+		Collection(config.RecoveryCollection()).
 		ReplaceOne(ctx,
 			bson.D{{"_id", recoveryID}},
 			checkpoint{
@@ -108,8 +108,8 @@ func DoCheckpoint(ctx context.Context, m *mongo.Client, rec Recoverable) error {
 }
 
 func DeleteRecoveryData(ctx context.Context, m *mongo.Client) error {
-	_, err := m.Database(config.PLMDatabase).
-		Collection(config.RecoveryCollection).
+	_, err := m.Database(config.PLMDatabase()).
+		Collection(config.RecoveryCollection()).
 		DeleteOne(ctx, bson.D{{"_id", recoveryID}})
 
 	return err //nolint:wrapcheck

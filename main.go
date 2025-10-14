@@ -32,13 +32,51 @@ import (
 	"github.com/percona/percona-link-mongodb/util"
 )
 
-// Constants for server configuration.
-const (
-	DefaultServerPort       = 2242
-	ServerReadTimeout       = 30 * time.Second
-	ServerReadHeaderTimeout = 3 * time.Second
-	MaxRequestSize          = humanize.MiByte
-	ServerResponseTimeout   = 5 * time.Second
+// Helper functions to read environment variables.
+func getEnvInt(key string, def int) int {
+	val := os.Getenv(key)
+	if val == "" {
+		return def
+	}
+	i, err := strconv.Atoi(val)
+	if err != nil {
+		return def
+	}
+	return i
+}
+
+func getEnvByteSize(key string, def int) int {
+	val := os.Getenv(key)
+	if val == "" {
+		return def
+	}
+	i, err := humanize.ParseBytes(val)
+	if err != nil {
+		return def
+	}
+	return int(i)
+}
+
+func getEnvDuration(key string, def time.Duration) time.Duration {
+	val := os.Getenv(key)
+	if val == "" {
+		return def
+	}
+	d, err := time.ParseDuration(val)
+	if err != nil {
+		return def
+	}
+	return d
+}
+
+// 💡 THESE ARE THE MODIFIED SETTINGS
+// Server configuration variables, now configurable via environment variables.
+var (
+	DefaultServerPort       = getEnvInt("PLM_SERVER_PORT", 2242)
+	ServerReadTimeout       = getEnvDuration("PLM_SERVER_READ_TIMEOUT", 30*time.Second)
+	ServerReadHeaderTimeout = getEnvDuration("PLM_SERVER_READ_HEADER_TIMEOUT", 3*time.Second)
+	MaxRequestSize          = int64(getEnvByteSize("PLM_MAX_REQUEST_SIZE", humanize.MiByte))
+	ServerResponseTimeout   = getEnvDuration("PLM_SERVER_RESPONSE_TIMEOUT", 5*time.Second)
 )
 
 var (
@@ -49,6 +87,7 @@ var (
 	BuildTime = ""       //nolint:gochecknoglobals
 )
 
+// ... (The rest of the file remains exactly the same) ...
 func buildVersion() string {
 	return Version + " " + GitCommit + " " + BuildTime
 }
@@ -283,7 +322,7 @@ var resetRecoveryCmd = &cobra.Command{
 		}
 
 		defer func() {
-			err := util.CtxWithTimeout(ctx, config.DisconnectTimeout, target.Disconnect)
+			err := util.CtxWithTimeout(ctx, config.DisconnectTimeout(), target.Disconnect)
 			if err != nil {
 				log.Ctx(ctx).Warn("Disconnect: " + err.Error())
 			}
@@ -322,7 +361,7 @@ var resetHeartbeatCmd = &cobra.Command{
 		}
 
 		defer func() {
-			err := util.CtxWithTimeout(ctx, config.DisconnectTimeout, target.Disconnect)
+			err := util.CtxWithTimeout(ctx, config.DisconnectTimeout(), target.Disconnect)
 			if err != nil {
 				log.Ctx(ctx).Warn("Disconnect: " + err.Error())
 			}
@@ -418,7 +457,7 @@ func resetState(ctx context.Context, targetURI string) error {
 	}
 
 	defer func() {
-		err := util.CtxWithTimeout(ctx, config.DisconnectTimeout, target.Disconnect)
+		err := util.CtxWithTimeout(ctx, config.DisconnectTimeout(), target.Disconnect)
 		if err != nil {
 			log.Ctx(ctx).Warn("Disconnect: " + err.Error())
 		}
@@ -491,7 +530,7 @@ func runServer(ctx context.Context, options serverOptions) error {
 	go func() {
 		<-ctx.Done()
 
-		err := util.CtxWithTimeout(ctx, config.DisconnectTimeout, srv.Close)
+		err := util.CtxWithTimeout(ctx, config.DisconnectTimeout(), srv.Close)
 		if err != nil {
 			log.New("server").Error(err, "Close server")
 		}
@@ -542,7 +581,7 @@ func createServer(ctx context.Context, sourceURI, targetURI string) (*server, er
 			return
 		}
 
-		err1 := util.CtxWithTimeout(ctx, config.DisconnectTimeout, source.Disconnect)
+		err1 := util.CtxWithTimeout(ctx, config.DisconnectTimeout(), source.Disconnect)
 		if err1 != nil {
 			log.Ctx(ctx).Warn("Disconnect Source Cluster: " + err1.Error())
 		}
@@ -569,7 +608,7 @@ func createServer(ctx context.Context, sourceURI, targetURI string) (*server, er
 			return
 		}
 
-		err1 := util.CtxWithTimeout(ctx, config.DisconnectTimeout, target.Disconnect)
+		err1 := util.CtxWithTimeout(ctx, config.DisconnectTimeout(), target.Disconnect)
 		if err1 != nil {
 			log.Ctx(ctx).Warn("Disconnect Target Cluster: " + err1.Error())
 		}

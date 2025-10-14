@@ -188,7 +188,7 @@ func BenchmarkInsert(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		if size+len(raw) > config.MaxWriteBatchSizeBytes || len(docs) >= batchSize {
+		if size+len(raw) > config.MaxWriteBatchSizeBytes() || len(docs) >= batchSize {
 			all.PushBack(task{docs, size})
 			totalSize += size
 

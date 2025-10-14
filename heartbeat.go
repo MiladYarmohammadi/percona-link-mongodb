@@ -51,7 +51,7 @@ func RunHeartbeat(ctx context.Context, m *mongo.Client) (StopHeartbeat, error) {
 		lastBeat := lastBeat
 
 		for {
-			time.Sleep(config.HeartbeatInternal)
+			time.Sleep(config.HeartbeatInternal())
 
 			savedBeat, err := doHeartbeat(ctx, m, lastBeat)
 			switch {
@@ -107,7 +107,7 @@ func retryHeartbeat(ctx context.Context, m *mongo.Client) (int64, error) {
 
 	lg.Infof("Try heartbeat again in %s", config.HeartbeatTimeout)
 
-	t := time.NewTicker(config.HeartbeatTimeout)
+	t := time.NewTicker(config.HeartbeatTimeout())
 	defer t.Stop()
 
 	for {
@@ -137,13 +137,13 @@ func retryHeartbeat(ctx context.Context, m *mongo.Client) (int64, error) {
 }
 
 func doFirstHeartbeat(ctx context.Context, m *mongo.Client) (int64, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, config.HeartbeatTimeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, config.HeartbeatTimeout())
 	defer cancel()
 
 	currBeat := time.Now().Unix()
 
-	_, err := m.Database(config.PLMDatabase).
-		Collection(config.HeartbeatCollection).
+	_, err := m.Database(config.PLMDatabase()).
+		Collection(config.HeartbeatCollection()).
 		InsertOne(timeoutCtx, bson.D{{"_id", heartbeatID}, {"time", currBeat}})
 	if err == nil {
 		return currBeat, nil
@@ -153,8 +153,8 @@ func doFirstHeartbeat(ctx context.Context, m *mongo.Client) (int64, error) {
 		return 0, err //nolint:wrapcheck
 	}
 
-	raw, err := m.Database(config.PLMDatabase).
-		Collection(config.HeartbeatCollection).
+	raw, err := m.Database(config.PLMDatabase()).
+		Collection(config.HeartbeatCollection()).
 		FindOne(ctx, bson.D{{"_id", heartbeatID}}).
 		Raw()
 	if err != nil {
@@ -163,7 +163,7 @@ func doFirstHeartbeat(ctx context.Context, m *mongo.Client) (int64, error) {
 
 	lastBeat, _ := raw.Lookup("time").AsInt64OK()
 
-	if time.Since(time.Unix(lastBeat, 0)) < config.StaleHeartbeatDuration {
+	if time.Since(time.Unix(lastBeat, 0)) < config.StaleHeartbeatDuration() {
 		return 0, errConcurrentProcess
 	}
 
@@ -176,13 +176,13 @@ func doFirstHeartbeat(ctx context.Context, m *mongo.Client) (int64, error) {
 }
 
 func doHeartbeat(ctx context.Context, m *mongo.Client, lastBeat int64) (int64, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, config.HeartbeatTimeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, config.HeartbeatTimeout())
 	defer cancel()
 
 	currBeat := time.Now().Unix()
 
-	raw, err := m.Database(config.PLMDatabase).
-		Collection(config.HeartbeatCollection).
+	raw, err := m.Database(config.PLMDatabase()).
+		Collection(config.HeartbeatCollection()).
 		FindOneAndUpdate(timeoutCtx,
 			bson.D{{"_id", heartbeatID}},
 			bson.D{{"$set", bson.D{{"time", currBeat}}}},
@@ -194,7 +194,7 @@ func doHeartbeat(ctx context.Context, m *mongo.Client, lastBeat int64) (int64, e
 
 	savedBeat, _ := raw.Lookup("time").AsInt64OK()
 
-	if time.Since(time.Unix(savedBeat, 0)) >= config.StaleHeartbeatDuration {
+	if time.Since(time.Unix(savedBeat, 0)) >= config.StaleHeartbeatDuration() {
 		return currBeat, errStaleHeartbeat
 	}
 
@@ -206,8 +206,8 @@ func doHeartbeat(ctx context.Context, m *mongo.Client, lastBeat int64) (int64, e
 }
 
 func DeleteHeartbeat(ctx context.Context, m *mongo.Client) error {
-	_, err := m.Database(config.PLMDatabase).
-		Collection(config.HeartbeatCollection).
+	_, err := m.Database(config.PLMDatabase()).
+		Collection(config.HeartbeatCollection()).
 		DeleteOne(ctx, bson.D{{"_id", heartbeatID}})
 
 	return err //nolint:wrapcheck

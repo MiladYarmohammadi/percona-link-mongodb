@@ -171,7 +171,7 @@ func GetCollStats(ctx context.Context, m *mongo.Client, db, coll string) (*CollS
 	}
 
 	defer func() {
-		err := util.CtxWithTimeout(context.Background(), config.CloseCursorTimeout, cur.Close)
+		err := util.CtxWithTimeout(context.Background(), config.CloseCursorTimeout(), cur.Close)
 		if err != nil {
 			log.Ctx(ctx).Errorf(err, "$collStas: %s: close cursor", db)
 		}

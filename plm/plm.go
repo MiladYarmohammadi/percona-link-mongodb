@@ -456,7 +456,7 @@ func (ml *PLM) monitorInitialSync(ctx context.Context) {
 		metrics.SetInitialSyncLagTimeSeconds(uint32(min(lagTime, math.MaxUint32))) //nolint:gosec
 
 		now := time.Now()
-		if now.Sub(lastPrintAt) >= config.InitialSyncCheckInterval {
+		if now.Sub(lastPrintAt) >= config.InitialSyncCheckInterval() {
 			lg.Debugf("Remaining logical seconds until Initial Sync completed: %d", lagTime)
 			lastPrintAt = now
 		}
@@ -500,7 +500,7 @@ func (ml *PLM) monitorLagTime(ctx context.Context) {
 		metrics.SetLagTimeSeconds(lagTime)
 
 		now := time.Now()
-		if now.Sub(lastPrintAt) >= config.PrintLagTimeInterval {
+		if now.Sub(lastPrintAt) >= config.PrintLagTimeInterval() {
 			lg.Infof("Lag Time: %d", lagTime)
 			lastPrintAt = now
 		}

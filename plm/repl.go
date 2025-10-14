@@ -149,9 +149,9 @@ func (r *Repl) Recover(cp *replCheckpoint) error {
 	r.lastReplicatedOpTime = cp.LastReplicatedOpTime
 
 	if cp.UseClientBulkWrite {
-		r.bulkWrite = newClientBulkWrite(config.BulkOpsSize)
+		r.bulkWrite = newClientBulkWrite(config.BulkOpsSize())
 	} else {
-		r.bulkWrite = newCollectionBulkWrite(config.BulkOpsSize)
+		r.bulkWrite = newCollectionBulkWrite(config.BulkOpsSize())
 	}
 
 	if cp.Error != "" {
@@ -210,9 +210,9 @@ func (r *Repl) Start(ctx context.Context, startAt bson.Timestamp) error {
 	}
 
 	if topo.Support(serverVersion).ClientBulkWrite() && !config.UseCollectionBulkWrite() {
-		r.bulkWrite = newClientBulkWrite(config.BulkOpsSize)
+		r.bulkWrite = newClientBulkWrite(config.BulkOpsSize())
 	} else {
-		r.bulkWrite = newCollectionBulkWrite(config.BulkOpsSize)
+		r.bulkWrite = newCollectionBulkWrite(config.BulkOpsSize())
 
 		log.New("repl").Debug("Use collection-level bulk write")
 	}
@@ -322,14 +322,14 @@ func (r *Repl) watchChangeEvents(
 ) error {
 	cur, err := r.source.Watch(ctx, mongo.Pipeline{},
 		streamOptions.SetShowExpandedEvents(true).
-			SetBatchSize(config.ChangeStreamBatchSize).
-			SetMaxAwaitTime(config.ChangeStreamAwaitTime))
+			SetBatchSize(int32(config.ChangeStreamBatchSize())).
+			SetMaxAwaitTime(config.ChangeStreamAwaitTime()))
 	if err != nil {
 		return errors.Wrap(err, "open")
 	}
 
 	defer func() {
-		err := util.CtxWithTimeout(context.Background(), config.CloseCursorTimeout, cur.Close)
+		err := util.CtxWithTimeout(context.Background(), config.CloseCursorTimeout(), cur.Close)
 		if err != nil {
 			log.New("repl:watch").Error(err, "Close change stream cursor")
 		}
@@ -436,7 +436,7 @@ func (r *Repl) run(opts *options.ChangeStreamOptionsBuilder) {
 	defer close(r.doneSig)
 
 	ctx := context.Background()
-	changeC := make(chan *ChangeEvent, config.ReplQueueSize)
+	changeC := make(chan *ChangeEvent, config.ReplQueueSize())
 
 	go func() {
 		defer close(changeC)
@@ -465,7 +465,7 @@ func (r *Repl) run(opts *options.ChangeStreamOptionsBuilder) {
 	lg := log.New("repl")
 
 	for change := range changeC {
-		if time.Since(r.lastBulkDoneAt) >= config.BulkOpsInterval && !r.bulkWrite.Empty() {
+		if time.Since(r.lastBulkDoneAt) >= config.BulkOpsInterval() && !r.bulkWrite.Empty() {
 			if !r.doBulkOps(ctx) {
 				return
 			}
@@ -481,7 +481,7 @@ func (r *Repl) run(opts *options.ChangeStreamOptionsBuilder) {
 			continue
 		}
 
-		if change.Namespace.Database == config.PLMDatabase {
+		if change.Namespace.Database == config.PLMDatabase() {
 			if r.bulkWrite.Empty() {
 				r.lock.Lock()
 				r.lastReplicatedOpTime = change.ClusterTime

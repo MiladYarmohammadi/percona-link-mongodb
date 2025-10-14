@@ -49,7 +49,7 @@ func CloneNumInsertWorkers() int {
 func CloneSegmentSizeBytes() int64 {
 	segmentSizeBytes, _ := humanize.ParseBytes(os.Getenv("PLM_CLONE_SEGMENT_SIZE"))
 	if segmentSizeBytes == 0 {
-		return AutoCloneSegmentSize
+		return int64(AutoCloneSegmentSize())
 	}
 
 	return int64(min(segmentSizeBytes, math.MaxInt64)) //nolint:gosec
@@ -90,10 +90,11 @@ func UseTargetClientCompressors() []string {
 // DefaultMongoDBCliOperationTimeout is used.
 func OperationMongoDBCliTimeout() time.Duration {
 	if v := strings.TrimSpace(os.Getenv("PLM_MONGODB_CLI_OPERATION_TIMEOUT")); v != "" {
-		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+		d, err := time.ParseDuration(v)
+		if err == nil && d > 0 {
 			return d
 		}
 	}
 
-	return DefaultMongoDBCliOperationTimeout
+	return DefaultMongoDBCliOperationTimeout()
 }

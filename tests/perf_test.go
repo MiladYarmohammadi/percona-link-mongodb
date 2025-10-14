@@ -233,7 +233,7 @@ func copyDocuments(b *testing.B, source, target *mongo.Client, db, coll string) 
 	}
 
 	averageDocumentSize := int(collStats.AvgObjSize)
-	maxWriteSize := config.MaxWriteBatchSizeBytes
+	maxWriteSize := config.MaxWriteBatchSizeBytes()
 	maxWriteCount := maxWriteSize / averageDocumentSize
 	maxReadCount := maxWriteCount
 
