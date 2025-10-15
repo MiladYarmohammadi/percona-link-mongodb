@@ -210,5 +210,10 @@ func DeleteHeartbeat(ctx context.Context, m *mongo.Client) error {
 		Collection(config.HeartbeatCollection()).
 		DeleteOne(ctx, bson.D{{"_id", heartbeatID}})
 
-	return err //nolint:wrapcheck
+	logger := log.New("heartbeat")
+	if err != nil {
+		logger.Error(err, "delete heartbeat")
+	}
+
+	return nil // err //nolint:wrapcheck
 }
